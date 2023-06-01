@@ -1,6 +1,6 @@
 === Lock Last Modified Date ===
 Contributors: nextfly
-Tags: modified date, last modified date, prevent modifed date, lock modified date, skip modified date
+Tags: modified date, last modified date, prevent modified date, lock modified date, skip modified date
 Requires at least: 3.8
 Tested up to: 6.2.2
 Stable tag: 0.0.1
