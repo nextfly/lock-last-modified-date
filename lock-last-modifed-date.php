@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Lock Last Modifed Date
-Plugin URI: https://nextflywebdesign.com/
+Plugin URI: https://github.com/nextfly/lock-last-modified-date/
 Description: With this plugin, you can prevent the last modified date from being updated for minor edits, such as fixing typos or updating thumbnails. <strong><em>Compatible with Classic Editor only.</em></strong>
 Version: 0.0.1
 Author: Nextfly
