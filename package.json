@@ -1,0 +1,24 @@
+{
+	"name": "lock-last-modified-date",
+	"version": "1.0.0",
+	"description": "Prevent last modified date updates for minor edits. Compatible with Classic Editor and Gutenberg.",
+	"main": "index.js",
+	"scripts": {
+		"build": "wp-scripts build",
+		"start": "wp-scripts start"
+	},
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"@wordpress/components": "^29.1.1",
+		"@wordpress/data": "^10.15.1",
+		"@wordpress/editor": "^14.15.1",
+		"@wordpress/hooks": "^3.53.1",
+		"@wordpress/i18n": "^5.15.1",
+		"@wordpress/plugins": "^7.15.1",
+		"@wordpress/scripts": "^30.8.1",
+		"@wordpress/element": "^6.16.0"
+	},
+	"dependencies": {
+	}
+}
