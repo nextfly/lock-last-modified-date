@@ -11,7 +11,6 @@
  * Tested up to: 6.7.1
  * License: GPLv3 or later
  * Text Domain: lock-last-modified-date
- * Domain Path: /languages
  *
  * @package LockLastModifiedDate
  * @since 1.0.0
