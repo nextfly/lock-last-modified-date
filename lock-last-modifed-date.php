@@ -153,8 +153,14 @@ final class LockLastModifiedDate {
             // Use incoming value if available, otherwise use current value.
             $shouldLock = $incomingLockState ?? $currentLockState;
         } else {
-            $shouldLock = filter_var(isset($_POST['lock_modified_date']) && $_POST['lock_modified_date'] === 'on', FILTER_VALIDATE_BOOLEAN);
-            update_post_meta($postarr['ID'], self::META_KEY, esc_attr($shouldLock));
+            // Verify nonce for Classic Editor submissions
+            if (isset($_POST['lock_modified_date_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['lock_modified_date_nonce'])), 'lock_modified_date_action')) {
+                $shouldLock = filter_var(isset($_POST['lock_modified_date']) && sanitize_text_field(wp_unslash($_POST['lock_modified_date'])) === 'on', FILTER_VALIDATE_BOOLEAN);
+                update_post_meta($postarr['ID'], self::META_KEY, esc_attr($shouldLock));
+            } else {
+                // If no valid nonce, keep existing value
+                $shouldLock = (bool) get_post_meta($postarr['ID'], self::META_KEY, true);
+            }
         }
 
         if ($shouldLock) {

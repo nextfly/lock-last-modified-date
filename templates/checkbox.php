@@ -18,6 +18,7 @@ defined('ABSPATH') || exit; ?>
         ); ?>
     </div>
     <div class="lock-modified-date-control">
+        <?php wp_nonce_field('lock_modified_date_action', 'lock_modified_date_nonce'); ?>
         <input 
             type="checkbox" 
             name="lock_modified_date" 
