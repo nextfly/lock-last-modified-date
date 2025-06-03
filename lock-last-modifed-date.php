@@ -65,7 +65,6 @@ final class LockLastModifiedDate {
      */
     private function initHooks(): void {
         // Classic Editor.
-        add_action('init', [$this, 'loadTextDomain']);
         add_action('post_submitbox_misc_actions', [$this, 'renderLockModifiedDateCheckbox']);
 
         // Shared.
@@ -103,15 +102,6 @@ final class LockLastModifiedDate {
             $format = get_option('date_format') . ' ' . get_option('time_format');
         }
         return $format;
-    }
-
-    /**
-     * Load plugin text domain for translations
-     *
-     * @since 1.0.0
-     */
-    public function loadTextDomain(): void {
-        load_plugin_textdomain('lock-last-modified-date', false, dirname(plugin_basename(__FILE__)) . '/languages');
     }
 
     /**
