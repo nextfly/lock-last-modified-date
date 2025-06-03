@@ -8,7 +8,6 @@
  * Author URI: https://nextflywebdesign.com/
  * Requires at least: 5.0
  * Requires PHP: 7.4
- * Tested up to: 6.7.1
  * License: GPLv3 or later
  * Text Domain: lock-last-modified-date
  *
