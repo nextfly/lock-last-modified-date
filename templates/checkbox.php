@@ -18,15 +18,15 @@ defined('ABSPATH') || exit; ?>
         ); ?>
     </div>
     <div class="lock-modified-date-control">
-        <?php wp_nonce_field('lock_modified_date_action', 'lock_modified_date_nonce'); ?>
+        <?php wp_nonce_field('nextfly_llmd_lock_modified_date_action', 'nextfly_llmd_lock_modified_date_nonce'); ?>
         <input 
             type="checkbox" 
-            name="lock_modified_date" 
-            id="lock_modified_date"
+            name="nextfly_llmd_lock_modified_date" 
+            id="nextfly_llmd_lock_modified_date"
             <?php checked($isLocked); ?>
         >
-        <label for="lock_modified_date">
+        <label for="nextfly_llmd_lock_modified_date">
             <?php esc_html_e('Lock Last Modified Date', 'lock-last-modified-date'); ?>
         </label>
     </div>
-</div> 
+</div>

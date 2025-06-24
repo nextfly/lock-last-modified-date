@@ -25,20 +25,20 @@ defined('ABSPATH') || exit;
  * @package LockLastModifiedDate
  * @since 1.0.0
  */
-final class LockLastModifiedDate {
+final class Nextfly_LLMD_Plugin {
     /**
-     * Meta key for the last modified date lock.
+     * Meta key for storing lock state.
      *
-     * @var string
+     * @since 1.0.0
      */
-    private const META_KEY = '_llmd_date_locked';
+    private const META_KEY = '_nextfly_llmd_date_locked';
 
     /**
-     * Instance of LockLastModifiedDate.
+     * Instance of Nextfly_LLMD_Plugin.
      *
-     * @var LockLastModifiedDate|null
+     * @var Nextfly_LLMD_Plugin|null
      */
-    private static ?LockLastModifiedDate $instance = null;
+    private static ?Nextfly_LLMD_Plugin $instance = null;
 
     /**
      * Singleton pattern implementation
@@ -46,7 +46,10 @@ final class LockLastModifiedDate {
      * @since 1.0.0
      */
     public static function getInstance(): self {
-        return self::$instance ??= new self();
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
     }
 
     /**
@@ -69,7 +72,7 @@ final class LockLastModifiedDate {
 
         // Shared.
         add_action('wp_insert_post_data', [$this, 'handleModifiedDateUpdate'], 10, 2);
-        add_filter('llmd_modified_time_format', [$this, 'getDateTimeFormat']);
+        add_filter('nextfly_llmd_modified_time_format', [$this, 'getDateTimeFormat']);
 
         // Gutenberg.
         if ($this->isGutenbergActive()) {
@@ -118,7 +121,7 @@ final class LockLastModifiedDate {
         $datetime_format = $date_format . ' ' . $time_format;
 
         // Apply filter to allow customization.
-        $datetime_format = apply_filters('llmd_modified_time_format', $datetime_format);
+        $datetime_format = apply_filters('nextfly_llmd_modified_time_format', $datetime_format);
 
         $lastModified = get_the_modified_time($datetime_format, $post);
         $isLocked = get_post_meta($post->ID, self::META_KEY, true);
@@ -140,22 +143,71 @@ final class LockLastModifiedDate {
             return $data;
         }
 
+        // Check user permissions first - user must be able to edit the specific post
+        if (!current_user_can('edit_post', $postarr['ID'])) {
+            return $data;
+        }
+
         $shouldLock = false;
 
         if ((isset($postarr['post_content']) && has_blocks($postarr['post_content'])) && wp_is_serving_rest_request()) {
-            // Get current meta value.
-            $currentLockState = get_post_meta($postarr['ID'], self::META_KEY, true);
+            // For REST API requests (Block Editor), verify nonce from headers
+            $nonce = null;
+            
+            // WordPress sends nonce in X-WP-Nonce header for REST requests
+            if (isset($_SERVER['HTTP_X_WP_NONCE'])) {
+                $nonce = sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE']));
+            }
+            
+            // Verify the REST nonce
+            if (!$nonce || !wp_verify_nonce($nonce, 'wp_rest')) {
+                // If nonce verification fails, keep existing value
+                $shouldLock = (bool) get_post_meta($postarr['ID'], self::META_KEY, true);
+            } else {
+                // Get current meta value
+                $currentLockState = get_post_meta($postarr['ID'], self::META_KEY, true);
 
-            // Check if there's an incoming meta value in the REST request.
-            $restRequest = json_decode(file_get_contents('php://input'), true);
-            $incomingLockState = $restRequest['meta'][self::META_KEY] ?? null;
+                // Safely get and sanitize the REST request data
+                $rawInput = file_get_contents('php://input');
+                $restRequest = null;
+                $incomingLockState = null;
+                
+                // Validate and sanitize JSON input
+                if (!empty($rawInput)) {
+                    $restRequest = json_decode($rawInput, true);
+                    
+                    // Validate JSON was parsed successfully and is an array
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($restRequest)) {
+                        // Check if meta exists and is an array
+                        if (isset($restRequest['meta']) && is_array($restRequest['meta'])) {
+                            // Check if our specific meta key exists
+                            if (array_key_exists(self::META_KEY, $restRequest['meta'])) {
+                                $rawValue = $restRequest['meta'][self::META_KEY];
+                                
+                                // Sanitize and validate the boolean value
+                                if (is_bool($rawValue)) {
+                                    $incomingLockState = $rawValue;
+                                } elseif (is_string($rawValue)) {
+                                    // Sanitize string input and convert to boolean
+                                    $sanitizedValue = sanitize_text_field($rawValue);
+                                    $incomingLockState = filter_var($sanitizedValue, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                                } elseif (is_numeric($rawValue)) {
+                                    // Handle numeric input (0/1)
+                                    $incomingLockState = (bool) intval($rawValue);
+                                }
+                                // If none of the above, $incomingLockState remains null (invalid data)
+                            }
+                        }
+                    }
+                }
 
-            // Use incoming value if available, otherwise use current value.
-            $shouldLock = $incomingLockState ?? $currentLockState;
+                // Use incoming value if valid, otherwise use current value
+                $shouldLock = $incomingLockState ?? $currentLockState;
+            }
         } else {
             // Verify nonce for Classic Editor submissions
-            if (isset($_POST['lock_modified_date_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['lock_modified_date_nonce'])), 'lock_modified_date_action')) {
-                $shouldLock = filter_var(isset($_POST['lock_modified_date']) && sanitize_text_field(wp_unslash($_POST['lock_modified_date'])) === 'on', FILTER_VALIDATE_BOOLEAN);
+            if (isset($_POST['nextfly_llmd_lock_modified_date_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nextfly_llmd_lock_modified_date_nonce'])), 'nextfly_llmd_lock_modified_date_action')) {
+                $shouldLock = filter_var(isset($_POST['nextfly_llmd_lock_modified_date']) && sanitize_text_field(wp_unslash($_POST['nextfly_llmd_lock_modified_date'])) === 'on', FILTER_VALIDATE_BOOLEAN);
                 update_post_meta($postarr['ID'], self::META_KEY, esc_attr($shouldLock));
             } else {
                 // If no valid nonce, keep existing value
@@ -195,14 +247,14 @@ final class LockLastModifiedDate {
         $asset_file = include plugin_dir_path(__FILE__) . 'build/gutenberg.asset.php';
 
         wp_enqueue_script(
-            'llmd-gutenberg',
+            'nextfly_llmd_gutenberg',
             plugins_url('build/gutenberg.js', __FILE__),
             $asset_file['dependencies'],
             $asset_file['version'],
             true
         );
 
-        wp_localize_script('llmd-gutenberg', 'llmdData', [
+        wp_localize_script('nextfly_llmd_gutenberg', 'nextfly_llmd_data', [
             'metaKey' => self::META_KEY
         ]);
     }
@@ -229,4 +281,4 @@ final class LockLastModifiedDate {
  *
  * @since 1.0.0
  */
-add_action('plugins_loaded', [LockLastModifiedDate::class, 'getInstance']);
+add_action('plugins_loaded', [Nextfly_LLMD_Plugin::class, 'getInstance']);
