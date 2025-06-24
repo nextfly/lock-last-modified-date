@@ -25,20 +25,20 @@ defined('ABSPATH') || exit;
  * @package LockLastModifiedDate
  * @since 1.0.0
  */
-final class LockLastModifiedDate {
+final class Nextfly_LLMD_Plugin {
     /**
-     * Meta key for the last modified date lock.
+     * Meta key for storing lock state.
      *
-     * @var string
+     * @since 1.0.0
      */
-    private const META_KEY = '_llmd_date_locked';
+    private const META_KEY = '_nextfly_llmd_date_locked';
 
     /**
-     * Instance of LockLastModifiedDate.
+     * Instance of Nextfly_LLMD_Plugin.
      *
-     * @var LockLastModifiedDate|null
+     * @var Nextfly_LLMD_Plugin|null
      */
-    private static ?LockLastModifiedDate $instance = null;
+    private static ?Nextfly_LLMD_Plugin $instance = null;
 
     /**
      * Singleton pattern implementation
@@ -46,7 +46,10 @@ final class LockLastModifiedDate {
      * @since 1.0.0
      */
     public static function getInstance(): self {
-        return self::$instance ??= new self();
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
     }
 
     /**
@@ -69,7 +72,7 @@ final class LockLastModifiedDate {
 
         // Shared.
         add_action('wp_insert_post_data', [$this, 'handleModifiedDateUpdate'], 10, 2);
-        add_filter('llmd_modified_time_format', [$this, 'getDateTimeFormat']);
+        add_filter('nextfly_llmd_modified_time_format', [$this, 'getDateTimeFormat']);
 
         // Gutenberg.
         if ($this->isGutenbergActive()) {
@@ -118,7 +121,7 @@ final class LockLastModifiedDate {
         $datetime_format = $date_format . ' ' . $time_format;
 
         // Apply filter to allow customization.
-        $datetime_format = apply_filters('llmd_modified_time_format', $datetime_format);
+        $datetime_format = apply_filters('nextfly_llmd_modified_time_format', $datetime_format);
 
         $lastModified = get_the_modified_time($datetime_format, $post);
         $isLocked = get_post_meta($post->ID, self::META_KEY, true);
@@ -203,8 +206,8 @@ final class LockLastModifiedDate {
             }
         } else {
             // Verify nonce for Classic Editor submissions
-            if (isset($_POST['lock_modified_date_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['lock_modified_date_nonce'])), 'lock_modified_date_action')) {
-                $shouldLock = filter_var(isset($_POST['lock_modified_date']) && sanitize_text_field(wp_unslash($_POST['lock_modified_date'])) === 'on', FILTER_VALIDATE_BOOLEAN);
+            if (isset($_POST['nextfly_llmd_lock_modified_date_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nextfly_llmd_lock_modified_date_nonce'])), 'nextfly_llmd_lock_modified_date_action')) {
+                $shouldLock = filter_var(isset($_POST['nextfly_llmd_lock_modified_date']) && sanitize_text_field(wp_unslash($_POST['nextfly_llmd_lock_modified_date'])) === 'on', FILTER_VALIDATE_BOOLEAN);
                 update_post_meta($postarr['ID'], self::META_KEY, esc_attr($shouldLock));
             } else {
                 // If no valid nonce, keep existing value
@@ -244,14 +247,14 @@ final class LockLastModifiedDate {
         $asset_file = include plugin_dir_path(__FILE__) . 'build/gutenberg.asset.php';
 
         wp_enqueue_script(
-            'llmd-gutenberg',
+            'nextfly_llmd_gutenberg',
             plugins_url('build/gutenberg.js', __FILE__),
             $asset_file['dependencies'],
             $asset_file['version'],
             true
         );
 
-        wp_localize_script('llmd-gutenberg', 'llmdData', [
+        wp_localize_script('nextfly_llmd_gutenberg', 'nextfly_llmd_data', [
             'metaKey' => self::META_KEY
         ]);
     }
@@ -278,4 +281,4 @@ final class LockLastModifiedDate {
  *
  * @since 1.0.0
  */
-add_action('plugins_loaded', [LockLastModifiedDate::class, 'getInstance']);
+add_action('plugins_loaded', [Nextfly_LLMD_Plugin::class, 'getInstance']);

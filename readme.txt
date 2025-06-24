@@ -26,7 +26,7 @@ Lock Last Modified Date allows you to control when your post's modified date get
 * No configuration needed
 
 = Available Filter Hook =
-`llmd_modified_time_format( $format )`
+`nextfly_llmd_modified_time_format( $format )`
 Use this filter to customize the date/time format in the editor.
 
 == Installation ==

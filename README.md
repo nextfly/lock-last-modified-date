@@ -25,7 +25,7 @@ With this plugin, you can prevent the last modified date from being updated for 
 
 ### Available Filter Hook
 
-`llmd_modified_time_format( $format )`
+`nextfly_llmd_modified_time_format( $format )`
 Use this filter to customize the date/time format in the editor.
 
 ## Current Version: 1.0.0
