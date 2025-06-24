@@ -140,18 +140,67 @@ final class LockLastModifiedDate {
             return $data;
         }
 
+        // Check user permissions first - user must be able to edit the specific post
+        if (!current_user_can('edit_post', $postarr['ID'])) {
+            return $data;
+        }
+
         $shouldLock = false;
 
         if ((isset($postarr['post_content']) && has_blocks($postarr['post_content'])) && wp_is_serving_rest_request()) {
-            // Get current meta value.
-            $currentLockState = get_post_meta($postarr['ID'], self::META_KEY, true);
+            // For REST API requests (Block Editor), verify nonce from headers
+            $nonce = null;
+            
+            // WordPress sends nonce in X-WP-Nonce header for REST requests
+            if (isset($_SERVER['HTTP_X_WP_NONCE'])) {
+                $nonce = sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE']));
+            }
+            
+            // Verify the REST nonce
+            if (!$nonce || !wp_verify_nonce($nonce, 'wp_rest')) {
+                // If nonce verification fails, keep existing value
+                $shouldLock = (bool) get_post_meta($postarr['ID'], self::META_KEY, true);
+            } else {
+                // Get current meta value
+                $currentLockState = get_post_meta($postarr['ID'], self::META_KEY, true);
 
-            // Check if there's an incoming meta value in the REST request.
-            $restRequest = json_decode(file_get_contents('php://input'), true);
-            $incomingLockState = $restRequest['meta'][self::META_KEY] ?? null;
+                // Safely get and sanitize the REST request data
+                $rawInput = file_get_contents('php://input');
+                $restRequest = null;
+                $incomingLockState = null;
+                
+                // Validate and sanitize JSON input
+                if (!empty($rawInput)) {
+                    $restRequest = json_decode($rawInput, true);
+                    
+                    // Validate JSON was parsed successfully and is an array
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($restRequest)) {
+                        // Check if meta exists and is an array
+                        if (isset($restRequest['meta']) && is_array($restRequest['meta'])) {
+                            // Check if our specific meta key exists
+                            if (array_key_exists(self::META_KEY, $restRequest['meta'])) {
+                                $rawValue = $restRequest['meta'][self::META_KEY];
+                                
+                                // Sanitize and validate the boolean value
+                                if (is_bool($rawValue)) {
+                                    $incomingLockState = $rawValue;
+                                } elseif (is_string($rawValue)) {
+                                    // Sanitize string input and convert to boolean
+                                    $sanitizedValue = sanitize_text_field($rawValue);
+                                    $incomingLockState = filter_var($sanitizedValue, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                                } elseif (is_numeric($rawValue)) {
+                                    // Handle numeric input (0/1)
+                                    $incomingLockState = (bool) intval($rawValue);
+                                }
+                                // If none of the above, $incomingLockState remains null (invalid data)
+                            }
+                        }
+                    }
+                }
 
-            // Use incoming value if available, otherwise use current value.
-            $shouldLock = $incomingLockState ?? $currentLockState;
+                // Use incoming value if valid, otherwise use current value
+                $shouldLock = $incomingLockState ?? $currentLockState;
+            }
         } else {
             // Verify nonce for Classic Editor submissions
             if (isset($_POST['lock_modified_date_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['lock_modified_date_nonce'])), 'lock_modified_date_action')) {
