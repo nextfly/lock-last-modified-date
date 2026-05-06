@@ -3,7 +3,7 @@
  * Plugin Name: Lock Last Modified Date
  * Plugin URI: https://github.com/nextfly/lock-last-modified-date/
  * Description: Prevent last modified date updates for minor edits. Compatible with Classic Editor and Gutenberg.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: NEXTFLY® Web Design
  * Author URI: https://nextflywebdesign.com/
  * Requires at least: 5.0
@@ -143,39 +143,60 @@ final class Nextfly_LLMD_Plugin {
             return $data;
         }
 
-        // Check user permissions first - user must be able to edit the specific post
-        if (!current_user_can('edit_post', $postarr['ID'])) {
+        $postId = (int) $postarr['ID'];
+
+        // When ID is 0 (programmatic create with no auto-draft), fall back to the
+        // post-type-aware generic capability so CPTs without `edit_posts` are not
+        // silently denied.
+        if ($postId === 0) {
+            $postType   = $postarr['post_type'] ?? 'post';
+            $ptObject   = get_post_type_object($postType);
+            $genericCap = ($ptObject && isset($ptObject->cap->edit_posts))
+                ? $ptObject->cap->edit_posts
+                : 'edit_posts';
+            $canEdit = current_user_can($genericCap);
+        } else {
+            $canEdit = current_user_can('edit_post', $postId);
+        }
+
+        if (!$canEdit) {
             return $data;
         }
 
         $shouldLock = false;
 
         if ((isset($postarr['post_content']) && has_blocks($postarr['post_content'])) && wp_is_serving_rest_request()) {
-            // For REST API requests (Block Editor), verify nonce from headers
+            // For REST API requests (Block Editor), verify nonce from headers.
             $nonce = null;
-            
-            // WordPress sends nonce in X-WP-Nonce header for REST requests
+
+            // WordPress sends nonce in X-WP-Nonce header for REST requests.
             if (isset($_SERVER['HTTP_X_WP_NONCE'])) {
                 $nonce = sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE']));
             }
-            
-            // Verify the REST nonce
+
+            // For REST creates (ID = 0) there is no stored post meta to preserve,
+            // so the safe baseline is "not locked" instead of reading post-0 meta.
+            $storedLockState = $postId === 0
+                ? false
+                : (bool) get_post_meta($postId, self::META_KEY, true);
+
+            // Verify the REST nonce.
             if (!$nonce || !wp_verify_nonce($nonce, 'wp_rest')) {
-                // If nonce verification fails, keep existing value
-                $shouldLock = (bool) get_post_meta($postarr['ID'], self::META_KEY, true);
+                // If nonce verification fails, keep existing value (or false on create).
+                $shouldLock = $storedLockState;
             } else {
-                // Get current meta value
-                $currentLockState = get_post_meta($postarr['ID'], self::META_KEY, true);
+                // Get current meta value (false for ID = 0 creates).
+                $currentLockState = $storedLockState;
 
                 // Safely get and sanitize the REST request data
                 $rawInput = file_get_contents('php://input');
                 $restRequest = null;
                 $incomingLockState = null;
-                
+
                 // Validate and sanitize JSON input
                 if (!empty($rawInput)) {
                     $restRequest = json_decode($rawInput, true);
-                    
+
                     // Validate JSON was parsed successfully and is an array
                     if (json_last_error() === JSON_ERROR_NONE && is_array($restRequest)) {
                         // Check if meta exists and is an array
@@ -183,7 +204,7 @@ final class Nextfly_LLMD_Plugin {
                             // Check if our specific meta key exists
                             if (array_key_exists(self::META_KEY, $restRequest['meta'])) {
                                 $rawValue = $restRequest['meta'][self::META_KEY];
-                                
+
                                 // Sanitize and validate the boolean value
                                 if (is_bool($rawValue)) {
                                     $incomingLockState = $rawValue;
@@ -204,19 +225,45 @@ final class Nextfly_LLMD_Plugin {
                 // Use incoming value if valid, otherwise use current value
                 $shouldLock = $incomingLockState ?? $currentLockState;
             }
+        } elseif ($postId === 0) {
+            // Programmatic create with no auto-draft: there is no stored post meta
+            // to read yet, so honour the lock intent passed via $postarr['meta_input'].
+            // wp_insert_post() will persist that meta after this filter returns.
+            if (
+                isset($postarr['meta_input'])
+                && is_array($postarr['meta_input'])
+                && array_key_exists(self::META_KEY, $postarr['meta_input'])
+            ) {
+                $shouldLock = (bool) $postarr['meta_input'][self::META_KEY];
+            }
         } else {
-            // Verify nonce for Classic Editor submissions
+            // Verify nonce for Classic Editor submissions.
             if (isset($_POST['nextfly_llmd_lock_modified_date_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nextfly_llmd_lock_modified_date_nonce'])), 'nextfly_llmd_lock_modified_date_action')) {
                 $shouldLock = filter_var(isset($_POST['nextfly_llmd_lock_modified_date']) && sanitize_text_field(wp_unslash($_POST['nextfly_llmd_lock_modified_date'])) === 'on', FILTER_VALIDATE_BOOLEAN);
-                update_post_meta($postarr['ID'], self::META_KEY, esc_attr($shouldLock));
+                update_post_meta($postId, self::META_KEY, esc_attr($shouldLock));
             } else {
-                // If no valid nonce, keep existing value
-                $shouldLock = (bool) get_post_meta($postarr['ID'], self::META_KEY, true);
+                // If no valid nonce, keep existing value.
+                $shouldLock = (bool) get_post_meta($postId, self::META_KEY, true);
             }
         }
 
         if ($shouldLock) {
-            unset($data['post_modified'], $data['post_modified_gmt']);
+            $originalStatus = $postarr['original_post_status'] ?? '';
+            $newStatus      = $data['post_status'] ?? '';
+
+            if ($originalStatus === 'publish') {
+                // Existing published post: preserve the frozen modified date.
+                unset($data['post_modified'], $data['post_modified_gmt']);
+            } elseif ($newStatus === 'publish') {
+                // Transitioning to publish (including scheduled future->publish via cron):
+                // lock modified to the publication date so a backdated post_date is honoured.
+                $data['post_modified']     = $data['post_date'];
+                $data['post_modified_gmt'] = $data['post_date_gmt'];
+            } else {
+                // All other locked saves (draft->draft, pending->pending, private->private,
+                // etc.): preserve whatever modified date is already stored in the DB.
+                unset($data['post_modified'], $data['post_modified_gmt']);
+            }
         }
 
         return $data;

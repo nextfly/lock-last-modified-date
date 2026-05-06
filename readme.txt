@@ -2,7 +2,7 @@
 Contributors: nextfly
 Tags: modified date, last modified date, prevent modified date, lock modified date, skip modified date
 Tested up to: 6.9
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -53,6 +53,9 @@ In Gutenberg: Find the toggle in the post settings sidebar under the "Status & V
 2. Gutenberg Editor interface
 
 == Changelog ==
+
+= 1.1.0 =
+* Fixed: Modified date now correctly set to the backdated publication date when locking on first publish
 
 = 1.0.0 =
 * Initial release
