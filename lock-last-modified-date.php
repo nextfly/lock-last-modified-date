@@ -251,6 +251,14 @@ final class Nextfly_LLMD_Plugin {
             $originalStatus = $postarr['original_post_status'] ?? '';
             $newStatus      = $data['post_status'] ?? '';
 
+            // WordPress only supplies `original_post_status` for wp-admin form
+            // submissions. REST (Block Editor) saves omit it, so fall back to the
+            // status still stored in the database - this filter runs before the row
+            // is updated, so that is the pre-save status.
+            if ($originalStatus === '' && $postId > 0) {
+                $originalStatus = (string) get_post_status($postId);
+            }
+
             if ($originalStatus === 'publish') {
                 // Existing published post: preserve the frozen modified date.
                 unset($data['post_modified'], $data['post_modified_gmt']);
