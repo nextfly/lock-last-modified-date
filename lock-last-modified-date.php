@@ -139,6 +139,13 @@ final class Nextfly_LLMD_Plugin {
      * @return array The modified data array.
      */
     public function handleModifiedDateUpdate(array $data, array $postarr): array {
+        // Revisions and autosaves are separate rows with their own timestamps; they
+        // are never the post being locked. Editing their dates here left them stored
+        // as 0000-00-00 00:00:00.
+        if (($data['post_type'] ?? '') === 'revision') {
+            return $data;
+        }
+
         if (!isset($postarr['ID'])) {
             return $data;
         }
