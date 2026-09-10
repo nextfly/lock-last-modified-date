@@ -6,9 +6,10 @@
  * Version: 1.1.1
  * Author: NEXTFLY® Web Design
  * Author URI: https://nextflywebdesign.com/
- * Requires at least: 5.0
+ * Requires at least: 6.5
  * Requires PHP: 7.4
  * License: GPLv3 or later
+ * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: lock-last-modified-date
  *
  * @package LockLastModifiedDate
