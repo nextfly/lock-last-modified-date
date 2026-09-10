@@ -165,7 +165,11 @@ final class Nextfly_LLMD_Plugin {
 
         $shouldLock = false;
 
-        if ((isset($postarr['post_content']) && has_blocks($postarr['post_content'])) && wp_is_serving_rest_request()) {
+        // Identify Block Editor saves by the request itself. Testing the content for
+        // block markup misses posts that have none - a legacy Classic Editor post
+        // opened in the Block Editor serialises back without block delimiters - and
+        // for those the lock toggle sent with the save was silently discarded.
+        if (wp_is_serving_rest_request()) {
             // For REST API requests (Block Editor), verify nonce from headers.
             $nonce = null;
 
