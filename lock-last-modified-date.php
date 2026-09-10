@@ -3,7 +3,7 @@
  * Plugin Name: Lock Last Modified Date
  * Plugin URI: https://github.com/nextfly/lock-last-modified-date/
  * Description: Prevent last modified date updates for minor edits. Compatible with Classic Editor and Gutenberg.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: NEXTFLY® Web Design
  * Author URI: https://nextflywebdesign.com/
  * Requires at least: 5.0

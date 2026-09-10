@@ -2,7 +2,7 @@
 Contributors: nextfly
 Tags: modified date, last modified date, prevent modified date, lock modified date, skip modified date
 Tested up to: 7.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -54,6 +54,11 @@ In Gutenberg: Find the toggle in the post settings sidebar under the "Status & V
 
 == Changelog ==
 
+= 1.1.1 =
+* Fixed: Locking an already published post in the Block Editor reset its modified date to the publication date instead of preserving it
+* Fixed: Turning the lock on in the Block Editor was ignored for that save on posts whose content contains no block markup, such as older Classic Editor posts
+* Fixed: Revisions of a locked post were saved with an empty modified date
+
 = 1.1.0 =
 * Fixed: Modified date now correctly set to the backdated publication date when locking on first publish
 
@@ -64,6 +69,9 @@ In Gutenberg: Find the toggle in the post settings sidebar under the "Status & V
 * Added filter hook for date format customization
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Fixes modified dates being reset or ignored when locking posts in the Block Editor.
 
 = 1.0.0 =
 Initial release with Classic Editor and Gutenberg support.
