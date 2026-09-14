@@ -12,7 +12,7 @@ With this plugin, you can prevent the last modified date from being updated for 
 
 ## Requirements
 
-* WordPress 5.0 or higher
+* WordPress 6.6 or higher
 * PHP 7.4 or higher
 
 ## Installation
@@ -28,4 +28,4 @@ With this plugin, you can prevent the last modified date from being updated for 
 `nextfly_llmd_modified_time_format( $format )`
 Use this filter to customize the date/time format in the editor.
 
-## Current Version: 1.1.0
+## Current Version: 1.1.1

@@ -3,12 +3,13 @@
  * Plugin Name: Lock Last Modified Date
  * Plugin URI: https://github.com/nextfly/lock-last-modified-date/
  * Description: Prevent last modified date updates for minor edits. Compatible with Classic Editor and Gutenberg.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: NEXTFLY® Web Design
  * Author URI: https://nextflywebdesign.com/
- * Requires at least: 5.0
+ * Requires at least: 6.6
  * Requires PHP: 7.4
  * License: GPLv3 or later
+ * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: lock-last-modified-date
  *
  * @package LockLastModifiedDate
@@ -139,6 +140,13 @@ final class Nextfly_LLMD_Plugin {
      * @return array The modified data array.
      */
     public function handleModifiedDateUpdate(array $data, array $postarr): array {
+        // Revisions and autosaves are separate rows with their own timestamps; they
+        // are never the post being locked. Editing their dates here left them stored
+        // as 0000-00-00 00:00:00.
+        if (($data['post_type'] ?? '') === 'revision') {
+            return $data;
+        }
+
         if (!isset($postarr['ID'])) {
             return $data;
         }
@@ -165,7 +173,17 @@ final class Nextfly_LLMD_Plugin {
 
         $shouldLock = false;
 
-        if ((isset($postarr['post_content']) && has_blocks($postarr['post_content'])) && wp_is_serving_rest_request()) {
+        // Identify Block Editor saves by the request itself. Testing the content for
+        // block markup misses posts that have none - a legacy Classic Editor post
+        // opened in the Block Editor serialises back without block delimiters - and
+        // for those the lock toggle sent with the save was silently discarded.
+        // wp_is_serving_rest_request() only exists from WP 6.5; calling it unguarded
+        // on older sites is a fatal error on every save.
+        $isRestRequest = function_exists('wp_is_serving_rest_request')
+            ? wp_is_serving_rest_request()
+            : (defined('REST_REQUEST') && REST_REQUEST);
+
+        if ($isRestRequest) {
             // For REST API requests (Block Editor), verify nonce from headers.
             $nonce = null;
 
@@ -250,6 +268,14 @@ final class Nextfly_LLMD_Plugin {
         if ($shouldLock) {
             $originalStatus = $postarr['original_post_status'] ?? '';
             $newStatus      = $data['post_status'] ?? '';
+
+            // WordPress only supplies `original_post_status` for wp-admin form
+            // submissions. REST (Block Editor) saves omit it, so fall back to the
+            // status still stored in the database - this filter runs before the row
+            // is updated, so that is the pre-save status.
+            if ($originalStatus === '' && $postId > 0) {
+                $originalStatus = (string) get_post_status($postId);
+            }
 
             if ($originalStatus === 'publish') {
                 // Existing published post: preserve the frozen modified date.
