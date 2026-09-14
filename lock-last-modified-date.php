@@ -177,7 +177,13 @@ final class Nextfly_LLMD_Plugin {
         // block markup misses posts that have none - a legacy Classic Editor post
         // opened in the Block Editor serialises back without block delimiters - and
         // for those the lock toggle sent with the save was silently discarded.
-        if (wp_is_serving_rest_request()) {
+        // wp_is_serving_rest_request() only exists from WP 6.5; calling it unguarded
+        // on older sites is a fatal error on every save.
+        $isRestRequest = function_exists('wp_is_serving_rest_request')
+            ? wp_is_serving_rest_request()
+            : (defined('REST_REQUEST') && REST_REQUEST);
+
+        if ($isRestRequest) {
             // For REST API requests (Block Editor), verify nonce from headers.
             $nonce = null;
 
