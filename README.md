@@ -12,7 +12,7 @@ With this plugin, you can prevent the last modified date from being updated for 
 
 ## Requirements
 
-* WordPress 6.5 or higher
+* WordPress 6.6 or higher
 * PHP 7.4 or higher
 
 ## Installation

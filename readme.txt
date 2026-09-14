@@ -1,7 +1,7 @@
 === Lock Last Modified Date ===
 Contributors: nextfly
 Tags: modified date, last modified, post date, revisions, seo
-Requires at least: 6.5
+Requires at least: 6.6
 Tested up to: 7.1
 Stable tag: 1.1.1
 Requires PHP: 7.4
@@ -57,7 +57,7 @@ In Gutenberg: Find the toggle in the post settings sidebar under the "Status & V
 == Changelog ==
 
 = 1.1.1 =
-* Changed: Minimum WordPress version is now 6.5
+* Changed: Minimum WordPress version is now 6.6
 * Fixed: Locking an already published post in the Block Editor reset its modified date to the publication date instead of preserving it
 * Fixed: Turning the lock on in the Block Editor was ignored for that save on posts whose content contains no block markup, such as older Classic Editor posts
 * Fixed: Revisions of a locked post were saved with an empty modified date
