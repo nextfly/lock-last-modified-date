@@ -74,7 +74,7 @@ In Gutenberg: Find the toggle in the post settings sidebar under the "Status & V
 == Upgrade Notice ==
 
 = 1.1.1 =
-Fixes modified dates being reset or ignored when locking posts in the Block Editor.
+Fixes modified dates being reset or ignored when locking posts in the Block Editor. Requires WordPress 6.6 or higher.
 
 = 1.0.0 =
 Initial release with Classic Editor and Gutenberg support.
